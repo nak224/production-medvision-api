@@ -9,7 +9,7 @@ check:
 	$(UV) run --frozen ruff format --check .
 
 test:
-	$(UV) run --frozen pytest -q
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run --frozen pytest -q
 
 download:
 	$(UV) run --frozen medvision-download
