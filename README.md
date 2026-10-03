@@ -8,28 +8,72 @@ treatment decisions, or medical use.
 
 ## Current milestone
 
-The first implementation covers data download and preprocessing, CPU training,
-evaluation, model export and an inference API. No trained benchmark model or measured
-PathMNIST performance is bundled. Tests use synthetic fixtures and do **not** establish
-medical accuracy. The API returns HTTP 503 until a checkpoint is available.
+The implementation covers data download and preprocessing, CPU/GPU training with
+automatic device detection, evaluation, model export and an inference API. No trained
+benchmark model or measured PathMNIST performance is bundled yet. Tests use synthetic
+fixtures and do **not** establish medical accuracy. The API returns HTTP 503 until a
+checkpoint is available.
 
-The implementation follows the **Production MedVision API** section of the supplied
-project document. See [the model card](docs/model-card.md) for intended use and limitations.
+See [the model card](docs/model-card.md) for intended use and limitations.
 
 ## Quick start
 
 Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/) (tested with 0.12.19),
-and optionally Docker. Linux CPU is the initial supported target; no GPU, account,
-API key, or external database is required. Run all commands from the repository root.
+and optionally Docker. Run all commands from the repository root.
+
+### CPU setup
 
 ```bash
-make setup check test
+make setup-cpu
+make check
+make test
 ```
 
-This installs the locked dependencies and runs the offline test suite, including
-a tiny synthetic training round trip. Dependency downloads need PyPI and the
-official PyTorch CPU wheel index. For cloud-specific setup, see
-[cloud development](docs/cloud-development.md).
+### GPU setup
+
+On a CUDA-capable environment such as Kaggle, install the standard PyTorch dependencies:
+
+```bash
+make setup-gpu
+```
+
+Verify that PyTorch can see the GPU before starting a full training run:
+
+```bash
+uv run python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
+```
+
+Training and evaluation automatically use CUDA when `torch.cuda.is_available()` is true
+and otherwise fall back to CPU. Checkpoints are exported with CPU tensors, so artifacts
+trained on a GPU remain loadable by the CPU inference service.
+
+The offline test suite includes a tiny synthetic training round trip. For cloud-specific
+setup, see [cloud development](docs/cloud-development.md).
+
+### Kaggle GPU training
+
+Create a Kaggle Notebook, enable a GPU accelerator and Internet access, then run:
+
+```bash
+!git clone -b feat/medvision-baseline https://github.com/nak224/production-medvision-api.git
+%cd production-medvision-api
+!pip install -q uv
+!make setup-gpu
+!uv run python -c "import torch; print('CUDA:', torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
+!make download
+!make smoke
+```
+
+The device check should print `CUDA: True` before running the full baseline. If the smoke
+run succeeds, start the complete training and test-set evaluation with:
+
+```bash
+!make train
+!make evaluate
+```
+
+Kaggle notebook storage is temporary. Download any checkpoint, report or MLflow artifact
+you want to keep before the session ends, or copy it to persistent storage.
 
 ### Download and run a small real-data experiment
 
@@ -56,11 +100,11 @@ make evaluate
 make serve
 ```
 
-`configs/base.yaml` defines five CPU epochs on the complete official training split.
-The best validation macro-F1 selects `artifacts/model.pt`. The test split is only
-evaluated by the separate evaluation command, which writes `reports/metrics.json`.
-Full CPU training can take considerably longer than the smoke run. Relative paths
-in configuration files are relative to the working directory.
+`configs/base.yaml` defines five epochs on the complete official training split. The
+best validation macro-F1 selects `artifacts/model.pt`. The test split is only evaluated
+by the separate evaluation command, which writes `reports/metrics.json`. Training uses
+CUDA automatically when available; CPU training can take considerably longer. Relative
+paths in configuration files are relative to the working directory.
 
 Each training run records parameters, train loss, validation metrics and artifacts
 in local MLflow. Re-running with the same output directory adds a tracking run and
@@ -108,8 +152,8 @@ docker run --rm -p 8000:8000 \
 For a smoke checkpoint, apply the permission commands to `artifacts/smoke` and
 its `model.pt`, then mount `$(pwd)/artifacts/smoke` instead. These permissions let
 the container's non-root user read the exported model. The container expects
-`/models/model.pt`. Data and weights are excluded
-from the image. A missing checkpoint leaves the container unhealthy (503).
+`/models/model.pt`. Data and weights are excluded from the image. A missing
+checkpoint leaves the container unhealthy (503).
 
 ## Data and architecture
 
@@ -127,19 +171,19 @@ from the image. A missing checkpoint leaves the container unhealthy (503).
 - Metrics: accuracy, macro-F1 across all nine classes, macro one-vs-rest AUROC,
   cross-entropy loss, and a confusion matrix. AUROC is `null` when a subset lacks
   one or more classes.
-- Reproducibility: locked dependencies, a versioned configuration, fixed seeds,
-  deterministic CPU operations and untouched official splits. Identical results
-  across other hardware or library versions are not guaranteed.
+- Reproducibility: locked/versioned dependencies, a versioned configuration, fixed
+  seeds and untouched official splits. Results can differ across CPU/GPU hardware
+  and library/runtime environments.
 
 ## Layout
 
 ```text
 src/medvision/   data, configuration, model, training, evaluation, inference
-api/            FastAPI application and response schemas
-configs/        full baseline and small smoke-run settings
-tests/          offline data, training, export, inference and API tests
-docs/           model card and cloud development notes
-.github/        CI: lint, formatting, tests and Docker build
+api/             FastAPI application and response schemas
+configs/         full baseline and small smoke-run settings
+tests/           offline data, training, export, inference and API tests
+docs/            model card and cloud development notes
+.github/         CI: lint, formatting, tests and Docker build
 ```
 
 Generated reports, datasets, weights and MLflow databases are ignored by Git.
