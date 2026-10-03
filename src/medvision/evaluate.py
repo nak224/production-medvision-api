@@ -13,16 +13,20 @@ from medvision.model import load_checkpoint
 
 
 @torch.inference_mode()
-def evaluate_model(model: nn.Module, loader: DataLoader) -> dict:
+def evaluate_model(model: nn.Module, loader: DataLoader, device: torch.device | None = None,) -> dict:
+    if device is None:
+        device = next(model.parameters()).device
     model.eval()
     labels, probabilities = [], []
     loss_sum = 0.0
     for images, targets in loader:
+        images = images.to(device)
+        targets = targets.to(device) 
         targets = targets.reshape(-1).long()
         logits = model(images)
         loss_sum += nn.functional.cross_entropy(logits, targets, reduction="sum").item()
-        labels.append(targets.numpy())
-        probabilities.append(logits.softmax(dim=1).numpy())
+        labels.append(targets.cpu().numpy())
+        probabilities.append(logits.softmax(dim=1).cpu().numpy())
     if not labels:
         raise ValueError("Cannot evaluate an empty dataset")
     y_true, scores = np.concatenate(labels), np.concatenate(probabilities)
@@ -58,7 +62,10 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("reports/metrics.json"))
     args = parser.parse_args()
     torch.set_num_threads(2)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
     model, metadata = load_checkpoint(args.checkpoint)
+    model = model.to(device)
     dataset = load_dataset(args.data_dir, args.split, args.limit, args.seed)
     report = {
         "dataset": "pathmnist",
@@ -68,7 +75,7 @@ def main() -> None:
         "model_version": metadata["model_version"],
         "training_config": metadata["config"],
         "class_names": list(CLASS_NAMES),
-        "metrics": evaluate_model(model, DataLoader(dataset, batch_size=128)),
+        "metrics": evaluate_model(model, DataLoader(dataset, batch_size=128), device),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")

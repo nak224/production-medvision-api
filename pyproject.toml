@@ -34,15 +34,6 @@ medvision-evaluate = "medvision.evaluate:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/medvision", "api"]
 
-[tool.uv.sources]
-torch = [{ index = "pytorch-cpu" }]
-torchvision = [{ index = "pytorch-cpu" }]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"

@@ -1,9 +1,11 @@
 UV ?= uv
 
 .PHONY: setup check test download train smoke evaluate serve
-setup:
-	$(UV) sync --frozen
+setup-cpu:
+	uv sync --extra-index-url https://download.pytorch.org/whl/cpu
 
+setup-gpu:
+	uv sync
 check:
 	$(UV) run --frozen ruff check .
 	$(UV) run --frozen ruff format --check .

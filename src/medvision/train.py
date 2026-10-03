@@ -21,6 +21,8 @@ def train(config: TrainingConfig) -> Path:
     torch.manual_seed(config.seed)
     torch.set_num_threads(config.num_threads)
     torch.use_deterministic_algorithms(True)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
     train_data = load_dataset(config.data_dir, "train", config.train_limit, config.seed)
     val_data = load_dataset(config.data_dir, "val", config.val_limit, config.seed)
     train_loader = DataLoader(
@@ -41,7 +43,7 @@ def train(config: TrainingConfig) -> Path:
         if experiment is not None
         else mlflow.create_experiment("pathmnist", artifact_location=(output / "mlruns").as_uri())
     )
-    model = build_model()
+    model = build_model().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     checkpoint_path = output / "model.pt"
     best_score = -1.0
@@ -53,6 +55,9 @@ def train(config: TrainingConfig) -> Path:
             model.train()
             loss_sum = 0.0
             for images, targets in train_loader:
+                images = images.to(device)
+                targets = targets.to(device)
+                
                 optimizer.zero_grad(set_to_none=True)
                 loss = nn.functional.cross_entropy(model(images), targets.reshape(-1).long())
                 loss.backward()
