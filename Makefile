@@ -1,0 +1,28 @@
+UV ?= uv
+
+.PHONY: setup check test download train smoke evaluate serve
+setup:
+	$(UV) sync --frozen
+
+check:
+	$(UV) run --frozen ruff check .
+	$(UV) run --frozen ruff format --check .
+
+test:
+	$(UV) run --frozen pytest -q
+
+download:
+	$(UV) run --frozen medvision-download
+
+train:
+	$(UV) run --frozen medvision-train --config configs/base.yaml
+
+smoke:
+	$(UV) run --frozen medvision-train --config configs/smoke.yaml
+	$(UV) run --frozen medvision-evaluate --checkpoint artifacts/smoke/model.pt --split val --limit 128 --output reports/smoke-metrics.json
+
+evaluate:
+	$(UV) run --frozen medvision-evaluate --checkpoint artifacts/model.pt
+
+serve:
+	$(UV) run --frozen uvicorn api.main:app --host 0.0.0.0 --port 8000
