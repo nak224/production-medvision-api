@@ -1,7 +1,7 @@
 UV ?= uv
 export CUBLAS_WORKSPACE_CONFIG ?= :4096:8
 
-.PHONY: setup-cpu setup-gpu check test download train smoke evaluate serve
+.PHONY: setup-cpu setup-gpu check test download train smoke evaluate serve check-2gpu train-2gpu smoke-2gpu
 setup-cpu:
 	uv sync --extra-index-url https://download.pytorch.org/whl/cpu
 
@@ -19,6 +19,16 @@ download:
 
 train:
 	$(UV) run --frozen medvision-train --config configs/base.yaml
+
+check-2gpu:
+	$(UV) run --frozen python -c "import torch; assert torch.cuda.device_count() >= 2, 'Two visible CUDA GPUs are required; use make train or make smoke for one GPU/CPU'"
+
+train-2gpu: check-2gpu
+	$(UV) run --frozen torchrun --standalone --nnodes=1 --nproc-per-node=2 -m medvision.train --config configs/base.yaml
+
+smoke-2gpu: check-2gpu
+	$(UV) run --frozen torchrun --standalone --nnodes=1 --nproc-per-node=2 -m medvision.train --config configs/smoke.yaml
+	$(UV) run --frozen medvision-evaluate --checkpoint artifacts/smoke/model.pt --split val --limit 128 --output reports/smoke-metrics.json
 
 smoke:
 	$(UV) run --frozen medvision-train --config configs/smoke.yaml

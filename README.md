@@ -85,6 +85,46 @@ run succeeds, start the complete training and test-set evaluation with:
 Kaggle notebook storage is temporary. Download any checkpoint, report or MLflow artifact
 you want to keep before the session ends, or copy it to persistent storage.
 
+### Using both Kaggle T4 GPUs
+
+Select **GPU T4 ×2** in Kaggle, then verify both devices are visible and run:
+
+```python
+!uv run --frozen python -c "import torch; print('GPUs:', torch.cuda.device_count())"
+!make download
+!make smoke-2gpu
+!make train-2gpu
+!make evaluate
+```
+
+The two-GPU targets require two visible CUDA devices. They launch one process per GPU
+with `torchrun` and PyTorch DistributedDataParallel (NCCL). The ordinary `make train`
+and `make smoke` commands still use a single GPU, or CPU when CUDA is unavailable.
+Download the data once before launching workers.
+
+`batch_size` is the **global batch size** and must divide evenly by the number of workers:
+the default 128 means 64 images per GPU. Each worker trains on a different shuffled shard;
+gradients are averaged across workers. For equal shard lengths without duplicate samples,
+at most one training example is dropped per epoch with two workers. The official training
+split is even, so the full two-GPU baseline drops none. The shuffle changes each epoch.
+
+Worker 0 evaluates the complete validation split once, writes one MLflow run and exports
+the usual CPU-loadable checkpoint. Other workers wait during validation. Batch normalization
+uses local per-GPU batches; the exported running statistics belong to worker 0. Results can
+differ from a single-GPU run even with the same seed and global batch size. MLflow records
+worker count, batch size per worker, processed training sample count and global average loss.
+
+Artifacts use the same paths as the single-GPU commands: `artifacts/smoke/model.pt` for
+the smoke run and `artifacts/model.pt` for full training. Avoid running independent jobs
+against the same output directory simultaneously. Evaluation and API inference continue
+to use one device.
+
+Two GPUs do not guarantee twice the speed: this small model on 28 × 28 images may spend
+much of its time loading data and synchronizing gradients. Compare full-epoch timings
+before increasing batch size. Each T4 keeps its own model copy; their memory is not pooled.
+The distributed flow is tested with two CPU/Gloo workers; T4/NCCL execution and speedups
+must be validated in Kaggle.
+
 ### Download and run a small real-data experiment
 
 ```bash
