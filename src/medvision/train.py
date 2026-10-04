@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import random
 from pathlib import Path
 
@@ -15,7 +16,20 @@ from medvision.evaluate import evaluate_model
 from medvision.model import build_model, save_checkpoint
 
 
+def _configure_cuda_determinism() -> None:
+    if "CUBLAS_WORKSPACE_CONFIG" not in os.environ:
+        if torch.cuda.is_initialized():
+            raise RuntimeError(
+                "Set CUBLAS_WORKSPACE_CONFIG=:4096:8 before initializing CUDA. "
+                "Restart the notebook kernel/process, set the variable, and retry training."
+            )
+        os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+    # Avoid selecting different convolution algorithms across repeated training runs.
+    torch.backends.cudnn.benchmark = False
+
+
 def train(config: TrainingConfig) -> Path:
+    _configure_cuda_determinism()
     random.seed(config.seed)
     np.random.seed(config.seed)
     torch.manual_seed(config.seed)

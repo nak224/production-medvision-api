@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 
 import mlflow
@@ -12,7 +13,29 @@ from medvision.data import load_dataset
 from medvision.evaluate import evaluate_model
 from medvision.evaluate import main as evaluate_main
 from medvision.model import load_checkpoint
-from medvision.train import train
+from medvision.train import _configure_cuda_determinism, train
+
+
+@pytest.mark.parametrize("existing", [None, ":16:8", ":4096:8"])
+def test_cuda_determinism_configuration(monkeypatch, existing):
+    monkeypatch.delenv("CUBLAS_WORKSPACE_CONFIG", raising=False)
+    if existing is not None:
+        monkeypatch.setenv("CUBLAS_WORKSPACE_CONFIG", existing)
+    monkeypatch.setattr(torch.cuda, "is_initialized", lambda: False)
+    monkeypatch.setattr(torch.backends.cudnn, "benchmark", True)
+
+    _configure_cuda_determinism()
+
+    assert os.environ["CUBLAS_WORKSPACE_CONFIG"] == (existing or ":4096:8")
+    assert not torch.backends.cudnn.benchmark
+
+
+def test_cuda_configuration_after_initialization_requires_restart(monkeypatch):
+    monkeypatch.delenv("CUBLAS_WORKSPACE_CONFIG", raising=False)
+    monkeypatch.setattr(torch.cuda, "is_initialized", lambda: True)
+    with pytest.raises(RuntimeError, match="Restart the notebook"):
+        _configure_cuda_determinism()
+    assert "CUBLAS_WORKSPACE_CONFIG" not in os.environ
 
 
 @pytest.mark.parametrize("device", [None, torch.device("cpu")], ids=["inferred", "explicit"])
@@ -59,6 +82,9 @@ def test_training_tracking_export_and_reload(synthetic_data, tmp_path, monkeypat
     )
     checkpoint = train(config)
     model, metadata = load_checkpoint(checkpoint)
+    # Validate reload on the training device; CPU and CUDA results need not be bitwise equal.
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
     report = json.loads((config.output_dir / "validation.json").read_text())
     assert report["epoch"] == 1
     assert report["split"] == "val"
@@ -71,6 +97,7 @@ def test_training_tracking_export_and_reload(synthetic_data, tmp_path, monkeypat
     assert run.data.params["seed"] == "42"
     assert run.data.metrics["val_accuracy"] == metrics["accuracy"]
     assert (config.output_dir / "mlflow.db").is_file()
+    model = model.cpu()
 
     # Re-running the same configuration must reuse tracking storage and reproduce weights/metrics.
     second_checkpoint = train(config)

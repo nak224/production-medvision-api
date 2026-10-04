@@ -47,6 +47,14 @@ Training and evaluation automatically use CUDA when `torch.cuda.is_available()` 
 and otherwise fall back to CPU. Checkpoints are exported with CPU tensors, so artifacts
 trained on a GPU remain loadable by the CPU inference service.
 
+Training keeps deterministic algorithms enabled. Make exports
+`CUBLAS_WORKSPACE_CONFIG=:4096:8` before launching Python, preserving an existing
+override such as `:16:8`. Direct calls to `train()` set the default before CUDA
+initialization, and training disables cuDNN benchmarking for repeatable runs.
+If CUDA is already initialized in a notebook without this variable, restart the
+kernel and set it before using CUDA. CPU and GPU results need not match bit for bit;
+the checkpoint round-trip test compares metrics on the training device.
+
 The offline test suite includes a tiny synthetic training round trip. For cloud-specific
 setup, see [cloud development](docs/cloud-development.md).
 
@@ -57,9 +65,11 @@ Create a Kaggle Notebook, enable a GPU accelerator and Internet access, then run
 ```bash
 !git clone -b feat/medvision-baseline https://github.com/nak224/production-medvision-api.git
 %cd production-medvision-api
+%env CUBLAS_WORKSPACE_CONFIG=:4096:8
 !pip install -q uv
 !make setup-gpu
 !uv run python -c "import torch; print('CUDA:', torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
+!make check test
 !make download
 !make smoke
 ```

@@ -1,4 +1,5 @@
 UV ?= uv
+export CUBLAS_WORKSPACE_CONFIG ?= :4096:8
 
 .PHONY: setup-cpu setup-gpu check test download train smoke evaluate serve
 setup-cpu:
