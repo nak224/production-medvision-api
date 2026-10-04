@@ -57,7 +57,7 @@ def train(config: TrainingConfig) -> Path:
             for images, targets in train_loader:
                 images = images.to(device)
                 targets = targets.to(device)
-                
+
                 optimizer.zero_grad(set_to_none=True)
                 loss = nn.functional.cross_entropy(model(images), targets.reshape(-1).long())
                 loss.backward()
@@ -93,7 +93,7 @@ def train(config: TrainingConfig) -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train the CPU ResNet-18 PathMNIST baseline")
+    parser = argparse.ArgumentParser(description="Train the ResNet-18 PathMNIST baseline")
     parser.add_argument("--config", type=Path, default=Path("configs/base.yaml"))
     args = parser.parse_args()
     print(train(load_config(args.config)))

@@ -13,7 +13,12 @@ from medvision.model import load_checkpoint
 
 
 @torch.inference_mode()
-def evaluate_model(model: nn.Module, loader: DataLoader, device: torch.device | None = None,) -> dict:
+def evaluate_model(
+    model: nn.Module,
+    loader: DataLoader,
+    device: torch.device | None = None,
+) -> dict:
+
     if device is None:
         device = next(model.parameters()).device
     model.eval()
@@ -21,7 +26,7 @@ def evaluate_model(model: nn.Module, loader: DataLoader, device: torch.device | 
     loss_sum = 0.0
     for images, targets in loader:
         images = images.to(device)
-        targets = targets.to(device) 
+        targets = targets.to(device)
         targets = targets.reshape(-1).long()
         logits = model(images)
         loss_sum += nn.functional.cross_entropy(logits, targets, reduction="sum").item()
