@@ -15,18 +15,42 @@ from medvision.model import load_checkpoint
 from medvision.train import train
 
 
-def test_metrics_for_known_predictions_and_missing_classes():
+@pytest.mark.parametrize("device", [None, torch.device("cpu")], ids=["inferred", "explicit"])
+def test_metrics_for_known_predictions_and_missing_classes(device):
     images = torch.eye(9) * 10
     labels = torch.arange(9).reshape(-1, 1)
-    metrics = evaluate_model(nn.Identity(), DataLoader(TensorDataset(images, labels), batch_size=4))
+    metrics = evaluate_model(
+        nn.Identity(), DataLoader(TensorDataset(images, labels), batch_size=4), device=device
+    )
     assert metrics["samples"] == 9
     assert metrics["accuracy"] == 1
     assert metrics["macro_f1"] == 1
     assert metrics["auroc_ovr_macro"] == 1
-    subset = evaluate_model(nn.Identity(), DataLoader(TensorDataset(images[:2], labels[:2])))
+    subset = evaluate_model(
+        nn.Identity(), DataLoader(TensorDataset(images[:2], labels[:2])), device=device
+    )
     assert subset["auroc_ovr_macro"] is None
     with pytest.raises(ValueError, match="empty"):
-        evaluate_model(nn.Identity(), DataLoader(TensorDataset(images[:0], labels[:0])))
+        evaluate_model(
+            nn.Identity(), DataLoader(TensorDataset(images[:0], labels[:0])), device=device
+        )
+
+
+def test_evaluation_with_buffers_but_no_parameters():
+    class BufferedIdentity(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.register_buffer("scale", torch.tensor(1.0))
+
+        def forward(self, images):
+            return images * self.scale
+
+    loader = DataLoader(TensorDataset(torch.eye(9) * 10, torch.arange(9)), batch_size=4)
+    metrics = evaluate_model(BufferedIdentity(), loader)
+    assert metrics["samples"] == 9
+    assert metrics["accuracy"] == 1
+    assert metrics["macro_f1"] == 1
+    assert metrics["auroc_ovr_macro"] == 1
 
 
 def test_training_tracking_export_and_reload(synthetic_data, tmp_path, monkeypatch):

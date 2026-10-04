@@ -1,5 +1,6 @@
 import argparse
 import json
+from itertools import chain
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +21,9 @@ def evaluate_model(
 ) -> dict:
 
     if device is None:
-        device = next(model.parameters()).device
+        state = next(chain(model.parameters(), model.buffers()), None)
+        # Stateless modules such as nn.Identity have no device to infer.
+        device = state.device if state is not None else torch.device("cpu")
     model.eval()
     labels, probabilities = [], []
     loss_sum = 0.0
