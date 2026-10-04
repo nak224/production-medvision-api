@@ -9,12 +9,97 @@ treatment decisions, or medical use.
 ## Current milestone
 
 The implementation covers data download and preprocessing, CPU/GPU training with
-automatic device detection, evaluation, model export and an inference API. No trained
-benchmark model or measured PathMNIST performance is bundled yet. Tests use synthetic
-fixtures and do **not** establish medical accuracy. The API returns HTTP 503 until a
-checkpoint is available.
+automatic device detection, evaluation, model export and an inference API. The first
+measured PathMNIST baseline is documented below; trained weights are kept outside Git.
+Tests use synthetic fixtures and do **not** establish medical accuracy. The API returns
+HTTP 503 until a checkpoint is available.
 
 See [the model card](docs/model-card.md) for intended use and limitations.
+
+## Baseline results
+
+ResNet-18 trained from scratch in a five-epoch PathMNIST run achieved **80.5% test
+accuracy, 0.740 macro-F1, and 0.961 macro one-vs-rest AUROC** on **7,180 held-out
+test samples**. This is the project's initial engineering baseline, not a
+state-of-the-art claim. The exported model is selected by validation macro-F1.
+
+| Metric | Test result |
+| --- | ---: |
+| Accuracy | 0.804596 |
+| Macro-F1 | 0.740466 |
+| Macro one-vs-rest AUROC | 0.960659 |
+| Cross-entropy loss | 1.459959 |
+| Test samples | 7,180 |
+
+Results come from the author's Kaggle evaluation report for model run
+`68dbe3df440645848a5fe277be677909`. The [complete report](reports/baseline/metrics.json)
+includes the exact scores, training configuration, class order and confusion counts.
+Accuracy and macro-F1 were cross-checked against those counts; AUROC and loss are
+reported from the evaluation output and require prediction scores to recompute.
+
+### Error analysis
+
+Performance varied substantially across tissue classes, with strong recall for
+background, lymphocytes, adipose, and colorectal adenocarcinoma epithelium, while
+**cancer-associated stroma remained the most challenging class**.
+
+| Tissue class | Correct / test samples | Recall |
+| --- | ---: | ---: |
+| adipose | 1,237 / 1,338 | 92.5% |
+| background | 847 / 847 | 100.0% |
+| debris | 293 / 339 | 86.4% |
+| lymphocytes | 627 / 634 | 98.9% |
+| mucus | 785 / 1,035 | 75.8% |
+| smooth muscle | 348 / 592 | 58.8% |
+| normal colon mucosa | 432 / 741 | 58.3% |
+| cancer-associated stroma | 79 / 421 | 18.8% |
+| colorectal adenocarcinoma epithelium | 1,129 / 1,233 | 91.6% |
+
+Of the 421 stroma samples, only 79 were classified correctly. The largest confusions
+were colorectal adenocarcinoma epithelium (**130**), debris (**106**), and smooth
+muscle (**83**). High AUROC indicates useful class-score ranking across thresholds;
+it does not imply uniformly reliable predictions across the nine tissue classes.
+
+![PathMNIST test confusion matrix, showing counts and row percentages](assets/baseline-confusion-matrix.png)
+
+Rows are true classes and columns are predicted classes. Colors and percentages
+are normalized within each true class, making low-recall classes visible despite
+unequal class sizes. Counts are included in every cell.
+
+### Preserve this baseline before further experiments
+
+Keep this model and its test report as the reference for future comparisons. On
+the Kaggle machine that still holds this run's `artifacts/model.pt`, run:
+
+```bash
+uv run --frozen python -m medvision.baseline
+```
+
+This archives the checkpoint, the published report, the confusion-matrix image and
+a SHA-256 manifest under `artifacts/baselines/pathmnist-resnet18-v1/`. It checks the
+checkpoint's model version and training configuration against the published report
+and refuses to overwrite an existing baseline. If a newer training run has already
+replaced `artifacts/model.pt`, supply the original checkpoint with `--checkpoint PATH`.
+The expected run ID is `68dbe3df440645848a5fe277be677909`.
+
+Download this baseline directory from Kaggle or copy it to persistent storage before
+ending the session. A local archive in Kaggle's temporary storage is not a durable
+backup. The original weights are not present in this repository, so the archive must
+be created on the machine holding them. For inference, set
+`MEDVISION_CHECKPOINT=artifacts/baselines/pathmnist-resnet18-v1/model.pt`.
+
+Use a different `output_dir` and evaluation report path for subsequent experiments.
+Do not overwrite the published baseline report or use repeated test-set feedback to
+select model changes; compare candidates on validation data first. No model tuning
+is included in this baseline publication.
+
+To regenerate the published image without training or a GPU:
+
+```bash
+uv run --frozen python -m medvision.reporting \
+  --report reports/baseline/metrics.json \
+  --output assets/baseline-confusion-matrix.png
+```
 
 ## Quick start
 
@@ -236,7 +321,8 @@ docs/            model card and cloud development notes
 .github/         CI: lint, formatting, tests and Docker build
 ```
 
-Generated reports, datasets, weights and MLflow databases are ignored by Git.
+Working reports, datasets, weights and MLflow databases are ignored by Git. The
+reviewed baseline report under `reports/baseline/` and its figure are versioned.
 GitHub Actions will run after these files are pushed; a local test pass is not a
-hosted CI result. A public demo, full benchmark results, calibration, latency
+hosted CI result. A public demo, calibration, latency
 measurements, a release and a code-license decision remain future work.
