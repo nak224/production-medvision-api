@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: setup check test download train smoke evaluate serve
+.PHONY: setup-cpu setup-gpu check test download train smoke evaluate serve
 setup-cpu:
 	uv sync --extra-index-url https://download.pytorch.org/whl/cpu
 
