@@ -1,20 +1,38 @@
 # Production MedVision API
 
-A reproducible PathMNIST classification pipeline: **PyTorch → MLflow → FastAPI**,
-with offline tests, a Docker image definition and GitHub Actions.
+An end-to-end ML engineering portfolio project that classifies nine tissue types
+from PathMNIST histology patches. It connects reproducible PyTorch training and
+MLflow experiment tracking to a checkpoint-backed FastAPI service, tested Docker
+images, GHCR publishing, and a simple AWS EC2 deployment with optional S3 artifacts.
 
 For research and portfolio demonstration only. Not intended for clinical diagnosis,
 treatment decisions, or medical use.
 
-## Current milestone
+**Tech stack:** Python 3.12 · PyTorch / torchvision · MedMNIST · MLflow · FastAPI /
+Pydantic · pytest / Ruff · Docker · GitHub Actions / GHCR · AWS EC2 / S3 / IAM.
 
-The implementation covers data download and preprocessing, CPU/GPU training with
-automatic device detection, evaluation, model export and an inference API. The first
-measured PathMNIST baseline is documented below; trained weights are kept outside Git.
-Tests use synthetic fixtures and do **not** establish medical accuracy. The API returns
-HTTP 503 until a checkpoint is available.
+```mermaid
+flowchart LR
+    A[PathMNIST] --> B[PyTorch training]
+    B --> C[MLflow tracking]
+    C --> D[Model artifact]
+    D --> E[S3 or local checkpoint]
+    E --> F[FastAPI inference]
+    F --> G[Docker image]
+    G --> H[GHCR]
+    H --> I[AWS EC2]
+```
 
-See [the model card](docs/model-card.md) for intended use and limitations.
+Training supports CPU, one GPU, and two-GPU DDP. The API exposes readiness, model
+metadata, single-image inference and bounded batch inference; all predictions use
+the loaded checkpoint. CI runs offline CPU tests and builds the image; pushes to
+`main` or version tags publish to GHCR. Deployment uses one EC2 Docker container
+with a local model mount or an S3 artifact accessed through an IAM role. See the
+[EC2 deployment commands](docs/aws-deployment.md) and [model card](docs/model-card.md).
+
+The measured baseline is summarized below. Trained weights remain outside Git;
+synthetic test fixtures do **not** establish medical accuracy. AWS resources and
+the first GHCR publication require your setup; no live deployment is claimed.
 
 ## Baseline results
 
@@ -254,9 +272,19 @@ For the smoke experiment use `sqlite:///artifacts/smoke/mlflow.db` instead.
 
 ### API requests
 
+| Endpoint | Response |
+| --- | --- |
+| `GET /health` | Readiness, whether a model is loaded, and its version; 503 when unready. |
+| `GET /model-info` | Loaded checkpoint architecture, model version, dataset, class names and preprocessing; 503 without a model. |
+| `POST /predict` | One PNG/JPEG upload in the `file` field; one prediction. |
+| `POST /predict/batch` | PNG/JPEG uploads in repeated `files` fields; an ordered array of predictions with filenames. |
+
 ```bash
 curl --fail http://127.0.0.1:8000/health
+curl --fail http://127.0.0.1:8000/model-info
 curl --fail -X POST -F 'file=@example.png' http://127.0.0.1:8000/predict
+curl --fail -F 'files=@example.png' -F 'files=@another.jpg' \
+  http://127.0.0.1:8000/predict/batch
 ```
 
 Provide your own public research patch as `example.png`. The service accepts PNG
@@ -265,11 +293,35 @@ It resizes to 28 × 28 and returns `class_id`, `label`, `confidence`, all nine
 `probabilities`, and `model_version`. Confidence is an uncalibrated softmax score.
 OpenAPI is exposed at `/openapi.json`, with interactive documentation at `/docs`.
 
+Batch predictions reuse the single-image decoder and Predictor. Limits are **16
+files, 5 MiB per file, 20 MiB total**, and 4 million pixels per image. Each result
+contains `filename` plus the same prediction fields as `/predict`. A batch is
+all-or-nothing: a bad image returns 413/415/422 with a zero-based `index`,
+`filename` and `error` in `detail`, with no partial results. Count/total-size limits
+return 413; missing uploads return 422; a missing model returns 503. All uploads
+are closed on success and failure. FastAPI spools multipart uploads before these
+endpoint limits are checked; run this unauthenticated demo behind restricted
+network access, as described in the deployment guide.
+
+`/model-info` reports checkpoint values without duplicating model constants or
+exposing weights/training configuration. The current checkpoint stores a versioned
+preprocessing identifier (`rgb-resize28-bilinear-normalize0.5-v1`), not separate
+input dimensions/format. Optional `input_size` and `expected_input_format` fields
+are returned only if represented in checkpoint metadata.
+
 `/health` returns 200 when a model is loaded, or 503 with `model_not_ready` when
 the checkpoint is missing. Invalid uploads return 422, unsupported image formats
 415, and images exceeding the limits 413. A corrupt or incompatible checkpoint
 fails startup. Set `MEDVISION_CHECKPOINT` before starting the service; restart it
 after replacing weights. There is no hot reload of model artifacts.
+
+Optionally set `MEDVISION_MODEL_S3_URI=s3://your-bucket/models/model.pt` at startup.
+It takes precedence over `MEDVISION_CHECKPOINT`, downloads a temporary artifact,
+and loads it through the same checkpoint validation. Boto3 uses standard AWS
+credentials or an EC2 IAM role. Invalid URIs/download failures fail startup; unset
+the S3 variable to return to local loading. The temporary file is removed after
+loading (also on failure). See [.env.example](.env.example) and the
+[AWS guide](docs/aws-deployment.md) for configuration; no credentials belong in Git.
 
 ### Docker
 
@@ -289,6 +341,13 @@ its `model.pt`, then mount `$(pwd)/artifacts/smoke` instead. These permissions l
 the container's non-root user read the exported model. The container expects
 `/models/model.pt`. Data and weights are excluded from the image. A missing
 checkpoint leaves the container unhealthy (503).
+
+After CI publishes on `main`, pull the same image from GHCR with
+`docker pull ghcr.io/nak224/production-medvision-api:latest`. Published builds also
+have `sha-<full-commit-sha>` tags; a version tag such as `v1.0.0` publishes `1.0.0`.
+PR checks are read-only and never publish. Follow the [EC2 guide](docs/aws-deployment.md)
+for Docker installation, private GHCR login, local/S3 checkpoint setup, restricted
+ports and health verification. No AWS deployment runs automatically.
 
 ## Data and architecture
 
@@ -317,8 +376,8 @@ src/medvision/   data, configuration, model, training, evaluation, inference
 api/             FastAPI application and response schemas
 configs/         full baseline and small smoke-run settings
 tests/           offline data, training, export, inference and API tests
-docs/            model card and cloud development notes
-.github/         CI: lint, formatting, tests and Docker build
+docs/            model card, cloud development and AWS deployment guide
+.github/         CI: lint, formatting, CPU tests, Docker build and GHCR publishing
 ```
 
 Working reports, datasets, weights and MLflow databases are ignored by Git. The

@@ -7,7 +7,7 @@ user explicitly requests one.
 ```bash
 cd /workspace/production-medvision-api
 export UV_CACHE_DIR=/workspace/.cache/uv
-make setup check test
+make setup-cpu check test
 ```
 
 All training and evaluation paths are relative to the repository root. No secrets

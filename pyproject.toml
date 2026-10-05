@@ -9,6 +9,7 @@ description = "Reproducible PathMNIST training and a FastAPI inference service."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+  "boto3>=1.35,<2",
   "fastapi>=0.115,<1",
   "medmnist==3.0.2",
   "mlflow>=3.0,<4",

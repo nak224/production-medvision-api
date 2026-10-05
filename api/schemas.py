@@ -13,3 +13,17 @@ class Health(BaseModel):
     status: str
     model_loaded: bool
     model_version: str | None
+
+
+class ModelInfo(BaseModel):
+    architecture: str
+    model_version: str
+    dataset: str
+    class_names: list[str]
+    preprocessing: str
+    input_size: int | list[int] | None = None
+    expected_input_format: str | None = None
+
+
+class BatchPrediction(Prediction):
+    filename: str | None
