@@ -1,8 +1,8 @@
 # Cloud development
 
-Use the existing checkout at `/workspace/production-medvision-api`. Each cloud
-task already has an isolated environment; do not create a Git worktree unless the
-user explicitly requests one.
+In the prepared cloud environment, use the existing checkout at
+`/workspace/production-medvision-api`. The environment is isolated, so this setup
+does not require an additional Git worktree.
 
 ```bash
 cd /workspace/production-medvision-api
@@ -26,13 +26,14 @@ MEDVISION_CHECKPOINT=artifacts/smoke/model.pt make serve
 
 Use a separate terminal to inspect `/health` with a local HTTP request and send a
 real PNG/JPEG patch to `/predict`. Without a checkpoint, `make serve` starts for
-API development but `/health` and `/predict` return 503. Do not report this state
-as successful model inference or generate random serving weights to mask it.
+API development but `/health` and `/predict` return 503. This indicates that the
+model is not ready; inference requires a trained checkpoint. Synthetic checkpoints
+are reserved for tests.
 
 The virtual environment, datasets, reports and model files persist on disk in
 the prepared environment snapshot. Uvicorn and optional MLflow UI processes must
 be started again in new tasks. Refresh dependencies using `uv sync --frozen`.
-Do not run training automatically during dependency installation.
+Dependency installation and training are separate steps.
 
 Offline tests generate synthetic archives and checkpoints exclusively in pytest
 temporary directories. MedMNIST may warn that it cannot initialize `~/.medmnist`
@@ -147,7 +148,7 @@ This archives the matching checkpoint, published report, confusion-matrix image 
 SHA-256 manifest under `artifacts/baselines/pathmnist-resnet18-v1/`. It checks model
 version and training configuration and refuses to overwrite an existing archive.
 If a later run has replaced `artifacts/model.pt`, pass the matching checkpoint with
-`--checkpoint PATH`. See the [published report's provenance](../reports/baseline/README.md)
+`--checkpoint PATH`. See the [evaluation and reproduction notes](../reports/baseline/README.md)
 for its model version. Store the archive persistently; weights are not in Git.
 For inference, set `MEDVISION_CHECKPOINT=artifacts/baselines/pathmnist-resnet18-v1/model.pt`.
 
