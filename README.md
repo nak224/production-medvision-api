@@ -50,7 +50,7 @@ state-of-the-art claim. The exported model is selected by validation macro-F1.
 | Test samples | 7,180 |
 
 Results come from the author's Kaggle evaluation report for model run
-`68dbe3df440645848a5fe277be677909`. The [complete report](reports/baseline/metrics.json)
+`8ffb86dbbb4b47ecb42784b50521a47e`. The [complete report](reports/baseline/metrics.json)
 includes the exact scores, training configuration, class order and confusion counts.
 Accuracy and macro-F1 were cross-checked against those counts; AUROC and loss are
 reported from the evaluation output and require prediction scores to recompute.
@@ -98,7 +98,7 @@ a SHA-256 manifest under `artifacts/baselines/pathmnist-resnet18-v1/`. It checks
 checkpoint's model version and training configuration against the published report
 and refuses to overwrite an existing baseline. If a newer training run has already
 replaced `artifacts/model.pt`, supply the original checkpoint with `--checkpoint PATH`.
-The expected run ID is `68dbe3df440645848a5fe277be677909`.
+The expected run ID is `8ffb86dbbb4b47ecb42784b50521a47e`.
 
 Download this baseline directory from Kaggle or copy it to persistent storage before
 ending the session. A local archive in Kaggle's temporary storage is not a durable

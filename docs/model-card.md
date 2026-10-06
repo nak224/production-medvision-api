@@ -40,7 +40,7 @@ version, training configuration, sample count, loss, accuracy, macro-F1, macro
 one-vs-rest AUROC and the ordered confusion matrix. AUROC is undefined (`null`) if
 any class is absent.
 
-The first baseline is model run `68dbe3df440645848a5fe277be677909`: five configured
+The first baseline is model run `8ffb86dbbb4b47ecb42784b50521a47e`: five configured
 epochs, seed 42, batch size 128 and learning rate 0.001, with no train/validation
 subset limits. Its full test evaluation on 7,180 images reports accuracy 0.804596,
 macro-F1 0.740466, macro one-vs-rest AUROC 0.960659 and cross-entropy loss 1.459959.

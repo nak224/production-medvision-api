@@ -51,7 +51,7 @@ def test_published_report_and_plot(tmp_path):
     assert int(counts.trace()) == 5777
     assert counts[7, 7] == 79
     assert int(counts[7].sum()) == 421
-    assert report["model_version"] == "68dbe3df440645848a5fe277be677909"
+    assert report["model_version"] == "8ffb86dbbb4b47ecb42784b50521a47e"
     image = plot_confusion_matrix(BASELINE_REPORT, tmp_path / "matrix.png")
     with Image.open(image) as png:
         assert png.format == "PNG"

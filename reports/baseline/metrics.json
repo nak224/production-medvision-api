@@ -3,7 +3,7 @@
   "split": "test",
   "requested_limit": null,
   "subset_seed": 42,
-  "model_version": "68dbe3df440645848a5fe277be677909",
+  "model_version": "8ffb86dbbb4b47ecb42784b50521a47e",
   "training_config": {
     "seed": 42,
     "epochs": 5,
