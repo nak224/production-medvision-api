@@ -163,6 +163,12 @@ setup, see [cloud development](docs/cloud-development.md).
 
 ### Kaggle GPU training
 
+PNG report generation uses Matplotlib's non-interactive Agg renderer, even when
+Kaggle exports an inline notebook backend unavailable in the project virtual
+environment. No notebook plotting dependency is required. On an older checkout,
+`!MPLBACKEND=Agg make check test` is a temporary workaround; pull the latest branch
+for the report-generation fix.
+
 Create a Kaggle Notebook, enable a GPU accelerator and Internet access, then run:
 
 ```bash

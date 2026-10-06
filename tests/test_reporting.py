@@ -1,5 +1,8 @@
 import hashlib
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -9,6 +12,37 @@ from medvision.baseline import freeze_baseline
 from medvision.reporting import load_report, plot_confusion_matrix
 
 BASELINE_REPORT = Path(__file__).resolve().parents[1] / "reports/baseline/metrics.json"
+
+
+@pytest.mark.parametrize(
+    "backend", ["module://matplotlib_inline.backend_inline", "module://missing_backend"]
+)
+def test_plot_with_unavailable_notebook_backend(tmp_path, backend):
+    output = tmp_path / "matrix.png"
+    environment = {**os.environ, "MPLBACKEND": backend, "MPLCONFIGDIR": str(tmp_path / "mpl")}
+    # A fresh interpreter exercises Matplotlib initialization, not its import cache.
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import os, sys; from pathlib import Path; "
+            "from medvision.baseline import freeze_baseline; "
+            "from medvision.reporting import plot_confusion_matrix; "
+            "backend = os.environ['MPLBACKEND']; "
+            "plot_confusion_matrix(Path(sys.argv[1]), Path(sys.argv[2])); "
+            "assert os.environ['MPLBACKEND'] == backend",
+            str(BASELINE_REPORT),
+            str(output),
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    with Image.open(output) as image:
+        assert image.format == "PNG"
+        assert image.width >= 1000 and image.height >= 1000
 
 
 def test_published_report_and_plot(tmp_path):

@@ -2,11 +2,11 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 from textwrap import fill
 
 import numpy as np
-from matplotlib.figure import Figure
 
 from medvision.data import CLASS_NAMES
 
@@ -40,10 +40,24 @@ def plot_confusion_matrix(report_path: Path, output: Path) -> Path:
     if output.suffix.lower() != ".png":
         raise ValueError("Confusion-matrix output must be a PNG file")
     report, counts = load_report(report_path)
+    # Kaggle can export an inline backend unavailable in this project's venv.
+    # Select Agg before Matplotlib's first import, then restore the caller's setting.
+    backend = os.environ.get("MPLBACKEND")
+    os.environ["MPLBACKEND"] = "Agg"
+    try:
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
+    finally:
+        if backend is None:
+            os.environ.pop("MPLBACKEND", None)
+        else:
+            os.environ["MPLBACKEND"] = backend
+
     support = counts.sum(axis=1, keepdims=True)
     percentages = np.divide(100 * counts, support, out=np.zeros((9, 9)), where=support > 0)
     # Use Figure directly: no interactive display or notebook backend is required.
     figure = Figure(figsize=(13, 11), layout="constrained")
+    FigureCanvasAgg(figure)
     axis = figure.subplots()
     image = axis.imshow(percentages, cmap="Blues", vmin=0, vmax=100)
     names = [fill(name, width=20) for name in report["class_names"]]
