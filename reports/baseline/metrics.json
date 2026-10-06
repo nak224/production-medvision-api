@@ -1,0 +1,48 @@
+{
+  "dataset": "pathmnist",
+  "split": "test",
+  "requested_limit": null,
+  "subset_seed": 42,
+  "model_version": "8ffb86dbbb4b47ecb42784b50521a47e",
+  "training_config": {
+    "seed": 42,
+    "epochs": 5,
+    "batch_size": 128,
+    "learning_rate": 0.001,
+    "num_workers": 0,
+    "num_threads": 2,
+    "data_dir": "data",
+    "output_dir": "artifacts",
+    "train_limit": null,
+    "val_limit": null
+  },
+  "class_names": [
+    "adipose",
+    "background",
+    "debris",
+    "lymphocytes",
+    "mucus",
+    "smooth muscle",
+    "normal colon mucosa",
+    "cancer-associated stroma",
+    "colorectal adenocarcinoma epithelium"
+  ],
+  "metrics": {
+    "samples": 7180,
+    "loss": 1.4599588115235225,
+    "accuracy": 0.8045961002785516,
+    "macro_f1": 0.7404663518799294,
+    "auroc_ovr_macro": 0.9606587846053262,
+    "confusion_matrix": [
+      [1237, 29, 6, 27, 6, 26, 1, 0, 6],
+      [0, 847, 0, 0, 0, 0, 0, 0, 0],
+      [0, 9, 293, 0, 0, 31, 0, 0, 6],
+      [0, 5, 0, 627, 0, 0, 0, 0, 2],
+      [83, 148, 4, 9, 785, 0, 1, 0, 5],
+      [0, 110, 51, 0, 29, 348, 0, 22, 32],
+      [1, 1, 0, 197, 1, 0, 432, 0, 109],
+      [0, 6, 106, 16, 0, 83, 1, 79, 130],
+      [0, 1, 4, 96, 1, 0, 2, 0, 1129]
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "production-medvision-api"
+version = "0.1.0"
+description = "Reproducible PathMNIST training and a FastAPI inference service."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "boto3>=1.35,<2",
+  "fastapi>=0.115,<1",
+  "medmnist==3.0.2",
+  "mlflow>=3.0,<4",
+  "numpy>=2,<3",
+  "pillow>=11,<13",
+  "pydantic>=2.10,<3",
+  "python-multipart>=0.0.20,<1",
+  "pyyaml>=6,<7",
+  "scikit-learn>=1.6,<2",
+  "torch==2.8.0",
+  "torchvision==0.23.0",
+  "uvicorn>=0.34,<1",
+]
+
+[dependency-groups]
+dev = ["httpx>=0.28,<1", "pytest>=8,<10", "ruff>=0.11,<1"]
+
+[project.scripts]
+medvision-download = "medvision.data:main"
+medvision-train = "medvision.train:main"
+medvision-evaluate = "medvision.evaluate:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/medvision", "api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

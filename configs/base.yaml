@@ -1,0 +1,10 @@
+seed: 42
+epochs: 5
+batch_size: 128
+learning_rate: 0.001
+num_workers: 0
+num_threads: 2
+data_dir: data
+output_dir: artifacts
+train_limit: null
+val_limit: null
