@@ -19,9 +19,6 @@ no public unauthenticated live endpoint is exposed.
 
 ![MedVision API demo](assets/medvision-demo.gif)
 
-*Recording placeholder: add `assets/medvision-demo.gif` showing the deployed service
-accessed through the documented secure setup.*
-
 ## Highlights
 
 - End-to-end PyTorch training and evaluation with MLflow tracking.
