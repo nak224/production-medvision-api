@@ -25,7 +25,7 @@ no public unauthenticated live endpoint is exposed.
 - CPU, single-GPU, and two-GPU DistributedDataParallel (DDP) training.
 - FastAPI model metadata, readiness checks, and single/batch image inference.
 - Automated offline tests, Docker packaging, and GitHub Actions CI/CD.
-- Working GHCR image publishing and AWS EC2 deployment.
+- GHCR image publishing and AWS EC2 deployment.
 - Private S3 model artifacts loaded through an EC2 IAM role.
 
 ## Architecture
@@ -62,11 +62,11 @@ claim. The exported model is selected by validation macro-F1.
 | Cross-entropy loss | 1.459959 |
 | Test samples | 7,180 |
 
-Model version: **`8ffb86dbbb4b47ecb42784b50521a47e`**. The author's
+Model version: **`8ffb86dbbb4b47ecb42784b50521a47e`**. The
 [complete evaluation report](reports/baseline/metrics.json) records the configuration,
 class order and confusion counts. Accuracy and macro-F1 were cross-checked against
 those counts; AUROC and loss are reported from evaluation and require prediction
-scores to recompute. See the [report provenance](reports/baseline/README.md).
+scores to recompute. See the [evaluation and reproduction notes](reports/baseline/README.md).
 
 ![PathMNIST test confusion matrix, showing counts and row percentages](assets/baseline-confusion-matrix.png)
 
@@ -93,7 +93,7 @@ smooth muscle (83). Background, lymphocytes, adipose, and adenocarcinoma have st
 recall. High AUROC reflects score ranking, not uniformly reliable classification
 across all nine tissue classes.
 
-Preserve the published checkpoint/report before further experiments with
+Preserve the baseline checkpoint and evaluation report before further experiments with
 `uv run --frozen python -m medvision.baseline`. Weights are intentionally excluded
 from Git; keep the archive in persistent storage. See the
 [baseline preservation instructions](reports/baseline/README.md).
@@ -241,14 +241,14 @@ for error details, metadata fields and upload handling.
 
 ## Deployment
 
-GHCR publishing is configured and working, and the API has been deployed on AWS EC2
-with a private S3 checkpoint loaded through an IAM role. Access remains restricted;
+GitHub Actions publishes Docker images to GHCR. The API runs on AWS EC2
+with a private S3 checkpoint loaded through an IAM role. Access is restricted;
 there is no public unauthenticated live endpoint.
 
 GitHub Actions runs lint, formatting, offline CPU tests and a Docker build before
 publishing on `main` or version-tag pushes. Tags include `latest` for main,
 `sha-<full-commit-sha>`, and `1.0.0` for `v1.0.0`; PR checks are read-only and never
-publish. EC2 rollout remains manual.
+publish. Deployments to EC2 are performed manually.
 
 Local loading uses `MEDVISION_CHECKPOINT` (`artifacts/model.pt` outside Docker).
 Setting `MEDVISION_MODEL_S3_URI=s3://your-bucket/models/model.pt` selects S3 instead.
@@ -312,4 +312,4 @@ docs/            model card, cloud development and AWS deployment guide
 ```
 
 Working reports, datasets, weights and MLflow databases are ignored by Git. The
-reviewed report in `reports/baseline/` and its confusion-matrix figure are versioned.
+baseline report in `reports/baseline/` and its confusion-matrix figure are versioned.
