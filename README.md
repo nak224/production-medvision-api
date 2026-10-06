@@ -260,13 +260,22 @@ The [AWS deployment guide](docs/aws-deployment.md) covers Docker installation, p
 GHCR authentication, IAM/S3 configuration, restricted ports, the SSH tunnel and
 health verification. Environment examples are in [.env.example](.env.example).
 
-## Dataset and Model
+## Dataset
 
-- **Data:** [PathMNIST / MedMNIST v2](https://zenodo.org/records/10519652), 28 × 28 RGB
-  histology patches across nine tissue classes. Official splits: 89,996 training,
+PathMNIST contains 28 × 28 RGB histopathology patches from nine tissue classes.
+
+![PathMNIST class examples](assets/pathmnist-examples.png)
+
+Example patches shown above are sampled from the official training split.
+
+- **Data:** [PathMNIST / MedMNIST v2](https://zenodo.org/records/10519652).
+  Official splits: 89,996 training,
   10,004 validation and 7,180 test images; test data comes from a different clinical center.
 - **License:** dataset **CC BY 4.0**, as declared by MedMNIST 3.0.2. Data/model licenses
   are separate from any future code license for this repository.
+
+## Model
+
 - **Model:** torchvision ResNet-18 trained from scratch, with a 3 × 3 stride-1 stem
   and no initial max-pooling. No pretrained weights are downloaded.
 - **Preprocessing:** RGB conversion, bilinear resize and channel normalization with
