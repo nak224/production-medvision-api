@@ -24,8 +24,8 @@ Only checkpoints produced by a trusted source should be loaded.
 [PathMNIST in MedMNIST v2](https://zenodo.org/records/10519652) is derived from
 NCT-CRC-HE-100K / CRC-VAL-HE-7K colorectal histology patches. The dataset is listed
 under CC BY 4.0 in MedMNIST's metadata. Preserve original-source attribution when
-sharing derived artifacts. This repository downloads from the provider and does
-not distribute the images.
+sharing derived artifacts. The full dataset is downloaded from the provider;
+the README includes selected training patches for illustration.
 
 The nine labels are adipose, background, debris, lymphocytes, mucus, smooth muscle,
 normal colon mucosa, cancer-associated stroma, and colorectal adenocarcinoma epithelium.
@@ -45,7 +45,7 @@ epochs, seed 42, batch size 128 and learning rate 0.001, with no train/validatio
 subset limits. Its full test evaluation on 7,180 images reports accuracy 0.804596,
 macro-F1 0.740466, macro one-vs-rest AUROC 0.960659 and cross-entropy loss 1.459959.
 These are one run's results, not confidence intervals or a state-of-the-art claim.
-The supplied report does not record GPU count or identify the selected checkpoint's
+The evaluation report does not record GPU count or identify the selected checkpoint's
 epoch within the five-epoch run.
 
 Cancer-associated stroma has the lowest recall: 79/421 (18.8%). Its largest
@@ -54,9 +54,11 @@ Smooth muscle and normal colon mucosa also have relatively low recall (58.8% and
 58.3%). See the [confusion matrix](../assets/baseline-confusion-matrix.png) and
 [class-level table](../README.md#error-analysis).
 
-Accuracy and macro-F1 were checked against the supplied confusion counts. AUROC and
-loss are retained from the author's evaluation output; prediction scores and the
-trained checkpoint are not available in this checkout for independent recomputation.
+Accuracy and macro-F1 match the recorded confusion counts. AUROC and loss come from
+the full test evaluation. Recomputing them requires the original prediction scores
+or evaluation of the matching trained checkpoint; scores and weights are not stored
+in Git.
+
 Keep this report and its matching checkpoint as the baseline before model changes.
 
 ## Limitations

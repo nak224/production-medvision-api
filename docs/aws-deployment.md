@@ -194,3 +194,40 @@ and `sudo docker rm medvision-api`, and repeat your chosen `docker run` command.
 Model changes also require a restart. Preserve the previous image tag and artifact
 for rollback. Stop or terminate EC2 when the demo is finished; EBS storage and
 public IP resources may continue to incur charges until removed.
+
+## API behavior
+
+The service exposes `/health`, `/model-info`, `/predict`, and `/predict/batch`.
+OpenAPI is available at `/openapi.json` and interactive documentation at `/docs`.
+Use public research patches, not patient data.
+
+Single-image prediction accepts the multipart field `file`; batches accept repeated
+`files` fields. PNG/JPEG images, including grayscale converted to RGB, share the
+same decoder and Predictor. Predictions return `class_id`, `label`, `confidence`,
+all nine `probabilities`, and `model_version`. Batch results also include `filename`
+and preserve upload order. Softmax confidence is uncalibrated.
+
+Limits are 5 MiB and 4 million pixels per image, 16 files and 20 MiB total per batch.
+A batch is all-or-nothing: an invalid image returns 413/415/422 with a zero-based
+`index`, `filename`, and `error` in `detail`, without partial results. Count/total-size
+limits return 413; missing uploads or corrupt images return 422; unsupported image
+formats return 415. All uploaded files are closed on success and failure. FastAPI
+spools multipart uploads before endpoint validation; these are not transport-level
+body limits. Keep access restricted as described above.
+
+`/model-info` returns values from the loaded checkpoint without exposing weights or
+training configuration. The current checkpoint represents preprocessing as
+`rgb-resize28-bilinear-normalize0.5-v1`, not separate input dimensions/format. Optional
+`input_size` and `expected_input_format` fields appear only when present in metadata.
+
+`/health` returns 200 when ready, or 503 with `model_not_ready` when a local checkpoint
+is missing. Model metadata and prediction endpoints also return 503 without a model.
+A corrupt or incompatible checkpoint fails startup. There is no artifact hot reload;
+restart after replacing weights.
+
+When set, `MEDVISION_MODEL_S3_URI` takes precedence over `MEDVISION_CHECKPOINT`.
+Downloads use a temporary directory, the existing checkpoint validator and boto3's
+standard credential chain. The temporary file is removed after loading, including
+on failure. Invalid S3 URIs or download errors fail startup; unset the S3 variable
+and mount a local checkpoint to switch back explicitly. No `.env` file is loaded
+automatically. See the environment table above and [`.env.example`](../.env.example).
